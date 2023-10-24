@@ -1,0 +1,60 @@
+---
+- name: Enable overcommit in sysctl
+  sysctl:
+    name: vm.overcommit_memory
+    value: 1
+    state: present
+    reload: yes
+    ignoreerrors: no
+
+- name: Disable THP
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  with_items:
+    - { name: 'vm.nr_hugepages', value: '0' }
+    - { name: 'vm.nr.overcommit_hugepages', value: '0' }
+#  command "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+
+- name: Download Redis source
+  get_url:
+    url: "http://download.redis.io/releases/redis-{{ redis_version }}.tar.gz"
+    dest: "/tmp/redis-{{ redis_version }}.tar.gz"
+  register: download_result
+
+- name: Extract archive
+  ansible,builtin.unarchive:
+    src: "/tmp/redis-{{ redis_version }}.tar.gz"
+    dest: "{{ redis_path }}"
+  when: download_result.changed
+
+- name: Create log directory
+  file:
+    path: "{{ redis_path }}/{{ redis_name }}/logs"
+    state: directory
+
+- name: Installing redis
+  command: make
+  args:
+    chdir: "{{ redis_path }}/{{ redis_name }}"
+  when: download_result.changed
+
+
+- make: Installing redis
+  command: make install
+  args:
+    chdir: "{{ redis_path }}/{{ redis_name }}"
+  when: download_result.changed
+
+- name: Configure redis config
+  template: src=redis.conf dest={{ redis_path }}/{{ redis_name }}/src
+
+- name: Adding init script
+  template: src=redis_init dest=/etc/init.d/{{ redis_name }} mode=0755
+
+- name: Starting Redis server
+  service: name={{ redis_name }} state=started enabled=yes
+
+- name: Waiting for start Redis
+  wait_for: port={{ redis_port }}
