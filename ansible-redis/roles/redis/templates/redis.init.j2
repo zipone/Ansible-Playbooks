@@ -1,0 +1,36 @@
+#!/bin/bash
+
+. /etc/rc.d/init.d/functions
+
+REDIS_SERVER={{ redis_path }}/redis-{{ redis_version }}/src/redis-server
+REDIS__CONF={{ redis_path }}/redis-{{ redis_version }}/src/redis.conf
+REDIS_USER=root
+MAX_OPEN_FILE=5535
+PID_FILE={{ redis_path }}/redis-{{ redis_version }}/redis_{{ redis_port }}.pid
+LOGFILE={{ redis_path }}/redis-{{ redis_version }}/logs/redis_{{redis_port }}.log
+DATA_DIR={{ redis_path }}/redis-{{ redis_version }}/data
+
+start() {
+  echo -n "starting Redis Server: "
+  ulimit -n $MAX_OPEN_FILES
+  daemon --user $REDIS_USER $REDIS_SERVER $REDIS_CONF >> $LOGFILE 2>&1 &
+  echo $! > $PID_FILE
+  success
+  echo
+}
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    stop
+    start
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart}"
+    exit 1
+esac
+exit 0

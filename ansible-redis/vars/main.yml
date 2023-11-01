@@ -1,0 +1,4 @@
+redis_path: "/opt"
+redis_version: "7.2.3"
+redis_name: "redis_test_v-{{ redis_version }}"
+redis_port: 6380
